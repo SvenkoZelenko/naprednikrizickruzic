@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Dialog from './Dialog';
 import { useI18n } from '../i18n';
 
-export default function NameDialog({ show, onStart, onCancel, defaultP1 = '', defaultP2 = '' }) {
+export default function NameDialog({ show, onStart, onCancel, defaultP1 = '', defaultP2 = '', mode = 'classic' }) {
   const { t } = useI18n();
   const [p1, setP1] = useState(defaultP1);
   const [p2, setP2] = useState(defaultP2);
@@ -10,11 +10,14 @@ export default function NameDialog({ show, onStart, onCancel, defaultP1 = '', de
 
   function handleStart() {
     if (!p1.trim() || !p2.trim()) return;
-    onStart({ p1: p1.trim(), p2: p2.trim(), timer });
+    onStart({ p1: p1.trim(), p2: p2.trim(), timer, mode });
   }
+
+  const modeLabel = t.modes['mode_' + mode];
 
   return (
     <Dialog show={show}>
+      <div className="dialog-mode-badge">{modeLabel}</div>
       <h2>{t.game.new_game_title}</h2>
 
       <label className="field-label">{t.game.player1} <span className="sym-x">✕</span></label>

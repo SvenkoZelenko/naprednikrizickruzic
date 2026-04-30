@@ -1,70 +1,80 @@
+// Geometric grid background — minimal, fits the board-game theme
 import { useEffect, useRef } from 'react';
-
-const POINT_COUNT    = 38;
-const CONNECTION_DIST = 160;
-const COLORS_LIGHT   = { dot: ['#dc3545', '#007bff'], line: ['rgba(220,53,69,', 'rgba(0,123,255,'] };
-const COLORS_DARK    = { dot: ['#ff6b7a', '#4da6ff'], line: ['rgba(255,107,122,', 'rgba(77,166,255,'] };
 
 export default function Background() {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx    = canvas.getContext('2d');
-    let pts = [], W = 0, H = 0, raf;
+    const ctx = canvas.getContext('2d');
+    let W = 0, H = 0, raf;
 
     function resize() {
       W = canvas.width  = window.innerWidth;
       H = canvas.height = window.innerHeight;
     }
-    function init() {
-      pts = Array.from({ length: POINT_COUNT }, (_, i) => ({
-        x: Math.random() * W, y: Math.random() * H,
-        vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5,
-        r: Math.random() * 5 + 4, col: i % 2,
-      }));
-    }
+
     function draw() {
       const dark = document.body.classList.contains('dark-mode');
-      const C    = dark ? COLORS_DARK : COLORS_LIGHT;
-      ctx.fillStyle = dark ? '#121212' : '#ffffff';
+      ctx.clearRect(0, 0, W, H);
+
+      // Base fill
+      ctx.fillStyle = dark ? '#0f0f14' : '#f4f4f8';
       ctx.fillRect(0, 0, W, H);
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
-          const d  = Math.hypot(dx, dy);
-          if (d < CONNECTION_DIST) {
-            ctx.beginPath();
-            ctx.strokeStyle = C.line[pts[i].col] + ((1 - d / CONNECTION_DIST) * 0.35) + ')';
-            ctx.lineWidth = 2;
-            ctx.moveTo(pts[i].x, pts[i].y);
-            ctx.lineTo(pts[j].x, pts[j].y);
-            ctx.stroke();
-          }
+
+      // Subtle grid lines
+      const step  = 60;
+      const alpha = dark ? 0.045 : 0.06;
+      ctx.strokeStyle = dark
+        ? `rgba(180,180,255,${alpha})`
+        : `rgba(0,0,80,${alpha})`;
+      ctx.lineWidth = 1;
+
+      for (let x = 0; x <= W; x += step) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+      for (let y = 0; y <= H; y += step) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+
+      // Faint X and O symbols scattered across grid intersections
+      const symbols = ['✕', '○'];
+      const symAlpha = dark ? 0.055 : 0.07;
+      ctx.font = 'bold 18px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Deterministic placement using grid indices
+      let idx = 0;
+      for (let x = step; x < W; x += step * 3) {
+        for (let y = step; y < H; y += step * 3) {
+          const sym = symbols[idx % 2];
+          const isX = sym === '✕';
+          ctx.fillStyle = isX
+            ? `rgba(220,53,69,${symAlpha})`
+            : `rgba(0,123,255,${symAlpha})`;
+          ctx.fillText(sym, x, y);
+          idx++;
         }
       }
-      for (const p of pts) {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = C.dot[p.col];
-        ctx.globalAlpha = 0.7;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
     }
-    function update() {
-      pts.forEach(p => {
-        p.x += p.vx; p.y += p.vy;
-        if (p.x < 0 || p.x > W) p.vx *= -1;
-        if (p.y < 0 || p.y > H) p.vy *= -1;
-      });
-    }
-    function loop() { update(); draw(); raf = requestAnimationFrame(loop); }
 
-    resize(); init(); loop();
-    const onResize = () => { resize(); init(); };
+    function loop() { draw(); raf = requestAnimationFrame(loop); }
+
+    resize();
+    loop();
+    const onResize = () => { resize(); };
     window.addEventListener('resize', onResize);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); };
+
+    // Redraw on theme change
+    const observer = new MutationObserver(draw);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+      observer.disconnect();
+    };
   }, []);
 
   return <canvas ref={canvasRef} id="bg-canvas" />;

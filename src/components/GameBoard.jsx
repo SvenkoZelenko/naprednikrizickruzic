@@ -2,89 +2,104 @@ import { useI18n } from '../i18n';
 import { getWinningLine } from '../game/logic';
 import { getPlayerRating, fmtDelta } from '../game/elo';
 
-const P_COLOR = { 1: '#dc3545', 2: '#007bff' };
+const P_COLOR = { 1: 'yellow', 2: 'violet' };
 const P_SYM   = { 1: '✕', 2: '○' };
 
 export default function GameBoard({
-  gs,             // game state
+  gs,
   p1name, p2name,
-  myNumber = null,     // null = local, 1|2 = online (for click gating)
-  onMove,         // (br, bc, r, c) => void
+  myNumber = null,
+  onMove,
   timerEnabled = false,
   timerSecs = 30,
   onReset,
   onBack,
-  result = null,  // { delta1, delta2, rating1, rating2 } after game ends
+  result = null,
 }) {
   const { t } = useI18n();
   if (!gs) return null;
 
-  const { bigBoard, smallBoards, currentPlayer, nextBoard, winner, draw } = gs;
-  const winLine = winner ? getWinningLine(bigBoard, winner) : null;
-
-  const r1 = getPlayerRating(p1name);
-  const r2 = getPlayerRating(p2name);
+  const { bigBoard, smallBoards, currentPlayer, nextBoard, winner, draw, mode = 'classic' } = gs;
+  const winLine  = winner ? getWinningLine(bigBoard, winner) : null;
+  const r1       = getPlayerRating(p1name);
+  const r2       = getPlayerRating(p2name);
   const gameOver = winner || draw;
 
-  function isActiveBoard(br, bc) {
-    if (bigBoard[br][bc] !== null) return false;
-    if (!nextBoard) return true;
-    return nextBoard.br === br && nextBoard.bc === bc;
+  // ── Board / cell logic per mode ──────────────────────────────────────────
+  function isBoardClosed(br, bc) {
+    if (mode === 'classic') return bigBoard[br][bc] !== null;
+    return smallBoards[br][bc].every(row => row.every(v => v !== null));
   }
 
-  function isWinningBoard(br, bc) {
-    return winLine?.some(([r,c]) => r === br && c === bc);
+  function isActiveBoardPos(br, bc) {
+    if (isBoardClosed(br, bc)) return false;
+    if (!nextBoard) return true;
+    return nextBoard.br === br && nextBoard.bc === bc;
   }
 
   function canClick(br, bc, r, c) {
     if (gameOver) return false;
     if (myNumber !== null && currentPlayer !== myNumber) return false;
-    if (!isActiveBoard(br, bc)) return false;
-    return smallBoards[br][bc][r][c] === null;
+    if (!isActiveBoardPos(br, bc)) return false;
+    const val = smallBoards[br][bc][r][c];
+    if (mode === 'steal') return val !== currentPlayer;
+    return val === null;
   }
 
+  function isWinningBoard(br, bc) {
+    return winLine?.some(([r, c]) => r === br && c === bc);
+  }
+
+  // ── Status text ──────────────────────────────────────────────────────────
   const locLabel = nextBoard
     ? `${t.game.board} ${nextBoard.br + 1},${nextBoard.bc + 1}`
     : t.game.anywhere;
 
   let statusText = '', statusColor = '#888';
   if (winner) {
-    const wname = winner === 1 ? p1name : p2name;
-    statusText  = t.game.wins(wname);
+    statusText  = t.game.wins(winner === 1 ? p1name : p2name);
     statusColor = P_COLOR[winner];
   } else if (draw) {
     statusText  = t.game.draw;
     statusColor = '#6c757d';
   } else {
-    const curName = currentPlayer === 1 ? p1name : p2name;
-    statusText    = t.game.turn(curName, P_SYM[currentPlayer], locLabel);
-    statusColor   = P_COLOR[currentPlayer];
+    statusText  = t.game.turn(currentPlayer === 1 ? p1name : p2name, P_SYM[currentPlayer], locLabel);
+    statusColor = P_COLOR[currentPlayer];
   }
+
+  const p1score = bigBoard.flat().filter(v => v === 1).length;
+  const p2score = bigBoard.flat().filter(v => v === 2).length;
+
+  // Mode badge color
+  const modeBadgeClass = { classic: 'badge-classic', zrules: 'badge-zrules', steal: 'badge-steal' }[mode] ?? '';
+  const modeLabel = t.modes?.['mode_' + mode] ?? mode;
 
   return (
     <div className="game-area">
       {/* Header */}
       <div className="game-header">
-        <PlayerCard name={p1name} score={bigBoard.flat().filter(v=>v===1).length}
-          rating={r1} active={!gameOver && currentPlayer===1} color="#dc3545" sym="✕"
+        <PlayerCard name={p1name} score={p1score} rating={r1}
+          active={!gameOver && currentPlayer === 1} color="#dc3545" sym="✕"
           delta={result?.delta1} newRating={result?.rating1} />
-        <div className="status-center" style={{ color: statusColor }}>{statusText}</div>
-        <PlayerCard name={p2name} score={bigBoard.flat().filter(v=>v===2).length}
-          rating={r2} active={!gameOver && currentPlayer===2} color="#007bff" sym="○"
+
+        <div className="status-center-col">
+          <div className={['mode-badge', modeBadgeClass].join(' ')}>{modeLabel}</div>
+          <div className="status-text" style={{ color: statusColor }}>{statusText}</div>
+        </div>
+
+        <PlayerCard name={p2name} score={p2score} rating={r2}
+          active={!gameOver && currentPlayer === 2} color="#007bff" sym="○"
           delta={result?.delta2} newRating={result?.rating2} align="right" />
       </div>
 
       {/* Timer bar */}
       {timerEnabled && !gameOver && (
         <div className="timer-bar">
-          <div
-            className="timer-fill"
-            style={{
-              width: `${(timerSecs / 30) * 100}%`,
-              background: timerSecs <= 10 ? '#dc3545' : '#007bff',
-            }}
-          />
-          <span className="timer-text" style={{ color: timerSecs <= 10 ? '#dc3545' : 'var(--timer-color)' }}>
+          <div className="timer-fill" style={{
+            width: `${(timerSecs / 30) * 100}%`,
+            background: timerSecs <= 10 ? 'yellow' : 'violet',
+          }} />
+          <span className="timer-text" style={{ color: timerSecs <= 10 ? 'yellow' : 'var(--timer-color)' }}>
             {timerSecs}s
           </span>
         </div>
@@ -92,48 +107,72 @@ export default function GameBoard({
 
       {/* Mega board */}
       <div className="mega-board">
-        {[0,1,2].map(br => [0,1,2].map(bc => {
+        {[0, 1, 2].map(br => [0, 1, 2].map(bc => {
           const boardResult = bigBoard[br][bc];
-          const active  = !gameOver && isActiveBoard(br, bc);
+          const active  = !gameOver && isActiveBoardPos(br, bc);
+          const closed  = isBoardClosed(br, bc);
           const winning = isWinningBoard(br, bc);
+
           return (
             <div
               key={`${br}-${bc}`}
               className={[
                 'main-board',
-                active   ? 'board-active'   : '',
-                !active && !gameOver && !winning ? 'board-inactive' : '',
-                boardResult ? 'board-resolved' : '',
-                winning  ? 'board-winning'  : '',
+                active  ? 'board-active'   : '',
+                !active && !gameOver && !winning && !closed ? 'board-inactive' : '',
+                closed  ? 'board-resolved' : '',
+                winning ? 'board-winning'  : '',
               ].join(' ')}
             >
-              {/* Small 3×3 grid */}
-              <div className="small-grid" style={{ opacity: boardResult ? 0.22 : 1 }}>
-                {[0,1,2].map(r => [0,1,2].map(c => {
-                  const val     = smallBoards[br][bc][r][c];
+              <div className="small-grid">
+                {[0, 1, 2].map(r => [0, 1, 2].map(c => {
+                  const val = smallBoards[br][bc][r][c];
                   const clickable = canClick(br, bc, r, c);
+                  // In Z/Steal modes dim the entire small grid only if board is closed
+                  const dimGrid = closed && !winning;
+
                   return (
                     <div
                       key={`${r}-${c}`}
-                      className={['small-cell', val ? 'small-cell-played' : '', clickable ? 'small-cell-hover' : ''].join(' ')}
+                      className={[
+                        'small-cell',
+                        val ? 'small-cell-played' : '',
+                        clickable ? 'small-cell-hover' : '',
+                        dimGrid ? 'small-cell-dim' : '',
+                      ].join(' ')}
                       onClick={() => clickable && onMove(br, bc, r, c)}
                       style={{ cursor: clickable ? 'pointer' : 'default' }}
                     >
-                      {val && <span className={val === 1 ? 'sym-x' : 'sym-o'}>{P_SYM[val]}</span>}
+                      {val && (
+                        <span className={val === 1 ? 'sym-x' : 'sym-o'}>
+                          {P_SYM[val]}
+                        </span>
+                      )}
+                      {/* Steal mode: highlight enemy cells that can be stolen */}
+                      {mode === 'steal' && !gameOver && active && val && val !== currentPlayer && (
+                        <span className="steal-indicator" />
+                      )}
                     </div>
                   );
                 }))}
               </div>
 
-              {/* Win overlay */}
-              {boardResult && (
+              {/* Win overlay — shown in classic always; in Z/Steal only when board still active */}
+              {boardResult && (mode === 'classic' || closed) && (
                 <div className="board-overlay">
                   {boardResult === 'draw'
-                    ? <span style={{ color: 'var(--user-bar-color)', fontSize: '2.6rem' }}>—</span>
+                    ? <span style={{ color: 'var(--text-muted)', fontSize: '2.2rem' }}>—</span>
                     : <span className={boardResult === 1 ? 'sym-x' : 'sym-o'} style={{ fontSize: '3rem' }}>
                         {P_SYM[boardResult]}
                       </span>
                   }
+                </div>
+              )}
+
+              {/* Z/Steal: show a small corner badge while board is won but still playable */}
+              {boardResult && mode !== 'classic' && !closed && (
+                <div className={['corner-badge', boardResult === 1 ? 'sym-x' : boardResult === 2 ? 'sym-o' : ''].join(' ')}>
+                  {boardResult !== 'draw' ? P_SYM[boardResult] : '—'}
                 </div>
               )}
             </div>
@@ -163,8 +202,7 @@ function PlayerCard({ name, score, rating, active, color, sym, delta, newRating,
       <div className="player-card-rating">
         {delta != null
           ? <><span style={{ color: delta >= 0 ? '#28a745' : '#dc3545' }}>{delta >= 0 ? '+' : ''}{delta}</span> → {newRating}</>
-          : `${rating}`
-        }
+          : `${rating}`}
       </div>
     </div>
   );

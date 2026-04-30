@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import Background from './components/Background';
 import Menu from './components/Menu';
 import NameDialog from './components/NameDialog';
@@ -16,31 +16,30 @@ import { useI18n } from './i18n';
 import { initialGameState, applyMove } from './game/logic';
 import { ensurePlayer, updateRatings } from './game/elo';
 
-// ── Screen identifiers ────────────────────────────────────────────────────────
-// menu | nameDialog | localGame | auth | lobby | waiting | onlineGame
-
 export default function App() {
   const { t, lang, toggle: toggleLang } = useI18n();
   const { dark, toggle: toggleTheme }   = useTheme();
   const { user, loading: authLoading, error: authError, signIn, signOut } = useAuth();
   const online = useOnlineGame();
 
-  // ── Screen state ──────────────────────────────────────────────────────────
+  // ── Screens ───────────────────────────────────────────────────────────────
   const [screen, setScreen]       = useState('menu');
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showRules, setShowRules] = useState(false);
 
-  // ── Local game state ──────────────────────────────────────────────────────
+  // ── Local game ────────────────────────────────────────────────────────────
   const [gs, setGs]               = useState(null);
   const [p1name, setP1name]       = useState('');
   const [p2name, setP2name]       = useState('');
+  const [gameMode, setGameMode]   = useState('classic');
   const [localTimer, setLocalTimer] = useState(false);
   const [timerSecs, setTimerSecs] = useState(30);
   const [timerHandle, setTimerHandle] = useState(null);
-  const [localResult, setLocalResult] = useState(null); // ELO deltas after game
+  const [localResult, setLocalResult] = useState(null);
   const [showGameOver, setShowGameOver] = useState(false);
+  // Pending mode from menu, used when NameDialog is shown
+  const [pendingMode, setPendingMode] = useState('classic');
 
-  // ── Local timer logic ─────────────────────────────────────────────────────
   function clearLocalTimer() {
     setTimerHandle(h => { if (h) clearInterval(h); return null; });
     setTimerSecs(30);
@@ -48,7 +47,7 @@ export default function App() {
 
   function startLocalTimer(currentGs) {
     clearLocalTimer();
-    if (!localTimer || (currentGs.winner || currentGs.draw)) return;
+    if (!localTimer || currentGs.winner || currentGs.draw) return;
     let s = 30;
     setTimerSecs(30);
     const h = setInterval(() => {
@@ -57,7 +56,6 @@ export default function App() {
       if (s <= 0) {
         clearInterval(h);
         setTimerHandle(null);
-        // Skip the current player's turn
         setGs(prev => {
           if (!prev || prev.winner || prev.draw) return prev;
           const skipped = { ...prev, currentPlayer: prev.currentPlayer === 1 ? 2 : 1 };
@@ -69,14 +67,14 @@ export default function App() {
     setTimerHandle(h);
   }
 
-  // ── Local game handlers ───────────────────────────────────────────────────
-  function handleStartLocal({ p1, p2, timer }) {
+  function handleStartLocal({ p1, p2, timer, mode }) {
     ensurePlayer(p1); ensurePlayer(p2);
     setP1name(p1); setP2name(p2);
+    setGameMode(mode);
     setLocalTimer(timer);
     setLocalResult(null);
     setShowGameOver(false);
-    const init = initialGameState();
+    const init = initialGameState(mode);
     setGs(init);
     setScreen('localGame');
     if (timer) startLocalTimer(init);
@@ -104,7 +102,7 @@ export default function App() {
     clearLocalTimer();
     setLocalResult(null);
     setShowGameOver(false);
-    const init = initialGameState();
+    const init = initialGameState(gameMode);
     setGs(init);
     if (localTimer) startLocalTimer(init);
   }
@@ -118,7 +116,7 @@ export default function App() {
     setScreen('menu');
   }
 
-  // ── Online flow ───────────────────────────────────────────────────────────
+  // ── Online ────────────────────────────────────────────────────────────────
   function handleOnlineBtn() {
     if (user) setScreen('lobby');
     else      setScreen('auth');
@@ -126,18 +124,10 @@ export default function App() {
 
   async function handleSignIn() {
     await signIn();
-    if (user) setScreen('lobby'); // onAuthStateChanged will update user
   }
 
-  // Watch for user becoming available after sign-in
-  // (useAuth sets user via onAuthStateChanged)
-  const handleSignedIn = useCallback(() => {
-    if (screen === 'auth' && user) setScreen('lobby');
-  }, [screen, user]);
-
-  // Simple effect substitute: derive lobby navigation from user+screen
+  // Redirect to lobby once signed in
   if (screen === 'auth' && user && !authLoading) {
-    // User just signed in — go to lobby
     setTimeout(() => setScreen('lobby'), 0);
   }
 
@@ -155,42 +145,30 @@ export default function App() {
     return result;
   }
 
-  // Sync screen from online phase
-  const onlinePhase = online.phase;
-  if (screen === 'waiting' && onlinePhase === 'playing') {
-    setTimeout(() => setScreen('onlineGame'), 0);
-  }
-  if (screen === 'onlineGame' && onlinePhase === 'idle') {
-    setTimeout(() => setScreen('lobby'), 0);
-  }
+  if (screen === 'waiting'    && online.phase === 'playing') setTimeout(() => setScreen('onlineGame'), 0);
+  if (screen === 'onlineGame' && online.phase === 'idle')    setTimeout(() => setScreen('lobby'), 0);
 
-  // ── Render helpers ────────────────────────────────────────────────────────
   const p1online = online.gameData?.player1name ?? '';
   const p2online = online.gameData?.player2name ?? '';
-  const isP1 = online.myNumber === 1;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
       <Background />
 
-      {/* ── Menu ── */}
       {screen === 'menu' && (
         <Menu
-          onNewGame={() => setScreen('nameDialog')}
+          onNewGame={(mode) => { setPendingMode(mode); setScreen('nameDialog'); }}
           onOnline={handleOnlineBtn}
           onLeaderboard={() => setShowLeaderboard(true)}
         />
       )}
 
-      {/* ── Name dialog ── */}
       {screen === 'nameDialog' && (
         <div className="screen screen-center">
-          <div className="menu-content">
-            <div className="game-logo">{t.app_title}</div>
-          </div>
           <NameDialog
             show={true}
+            mode={pendingMode}
             defaultP1={p1name}
             defaultP2={p2name}
             onStart={handleStartLocal}
@@ -199,7 +177,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Local game ── */}
       {screen === 'localGame' && gs && (
         <div className="screen screen-game">
           <GameBoard
@@ -225,7 +202,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Auth ── */}
       {screen === 'auth' && (
         <AuthScreen
           onSignIn={handleSignIn}
@@ -235,7 +211,6 @@ export default function App() {
         />
       )}
 
-      {/* ── Online lobby ── */}
       {screen === 'lobby' && user && (
         <OnlineLobby
           user={user}
@@ -248,7 +223,6 @@ export default function App() {
         />
       )}
 
-      {/* ── Waiting room ── */}
       {screen === 'waiting' && (
         <WaitingRoom
           roomCode={online.roomCode}
@@ -256,7 +230,6 @@ export default function App() {
         />
       )}
 
-      {/* ── Online game ── */}
       {screen === 'onlineGame' && online.gameState && (
         <div className="screen screen-game">
           <GameBoard
@@ -288,16 +261,14 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Global overlays ── */}
+      {/* Global overlays */}
       <Leaderboard show={showLeaderboard} onClose={() => setShowLeaderboard(false)} />
       <RulesDialog show={showRules} onClose={() => setShowRules(false)} />
 
-      {/* ── Corner controls ── */}
+      {/* Corner controls */}
       <div className="corner-controls">
         <button className="corner-btn" onClick={() => setShowRules(true)} title="Pravila">?</button>
-        <button className="corner-btn" onClick={toggleTheme} title="Tema">
-          {dark ? '☀️' : '🌙'}
-        </button>
+        <button className="corner-btn" onClick={toggleTheme}>{dark ? '☀️' : '🌙'}</button>
         <button className="corner-btn corner-btn-lang" onClick={toggleLang}>
           {lang === 'hr' ? 'EN' : 'HR'}
         </button>
