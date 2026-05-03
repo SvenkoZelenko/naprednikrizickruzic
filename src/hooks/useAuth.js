@@ -24,18 +24,22 @@ async function ensureFirestoreProfile(user) {
 
 export function useAuth() {
   const [user, setUser]       = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
 
-  // We intentionally do NOT restore persisted sessions on mount —
-  // sign-out is forced on page load so only this-session logins are used.
   useEffect(() => {
-    fbSignOut(auth).catch(() => {});
-  }, []);
-
-  // Listen for changes from signInWithPopup
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, u => setUser(u));
+    const unsub = onAuthStateChanged(
+      auth,
+      u => { setUser(u); setLoading(false); },
+      err => {
+        // Cached token couldn't be refreshed — clear it and let the user
+        // sign in fresh instead of getting stuck on auth/internal-error.
+        console.warn('Auth restore failed, signing out:', err);
+        fbSignOut(auth).catch(() => {});
+        setUser(null);
+        setLoading(false);
+      }
+    );
     return unsub;
   }, []);
 
@@ -47,6 +51,7 @@ export function useAuth() {
       const result   = await signInWithPopup(auth, provider);
       await ensureFirestoreProfile(result.user);
     } catch (err) {
+      console.error('signIn failed:', err.code, err.message, err);
       setError(err.message);
     } finally {
       setLoading(false);
