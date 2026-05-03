@@ -1,43 +1,55 @@
 rules_version = '2';
 
-// Security rules for Ultimativni Križić-Kružić
-// Adjust the collection names if yours differ. The defaults below assume:
-//   - players/{uid}      : Elo/profile data, owned by the user
-//   - games/{gameId}     : online matches, readable by both players, writable by participants
-//   - leaderboard/{uid}  : public read, write only by the owner
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: must be signed in
     function signedIn() {
       return request.auth != null;
     }
 
-    // Players: users can read any player profile, but only modify their own.
+    function isPlayer1(data) {
+      return data.player1uid == request.auth.uid;
+    }
+
+    function isPlayer2(data) {
+      return data.get('player2uid', null) == request.auth.uid;
+    }
+
+    function joiningAsPlayer2(oldData, newData) {
+      // Slot is open if player2uid was missing or null on the old doc,
+      // and the new doc writes the joiner's UID into it.
+      return oldData.get('player2uid', null) == null
+          && newData.player2uid == request.auth.uid;
+    }
+
     match /players/{uid} {
-      allow read: if signedIn();
+      allow read: if true;
       allow create, update: if signedIn() && request.auth.uid == uid;
       allow delete: if false;
     }
 
-    // Online games: only players in the match can read/write.
     match /games/{gameId} {
-      allow read: if signedIn() && (
-        resource == null ||
-        request.auth.uid in resource.data.players
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+                    && request.resource.data.player1uid == request.auth.uid;
+
+      allow update: if signedIn() && (
+        isPlayer1(resource.data) ||
+        isPlayer2(resource.data) ||
+        joiningAsPlayer2(resource.data, request.resource.data)
       );
-      allow create: if signedIn() && request.auth.uid in request.resource.data.players;
-      allow update: if signedIn() && request.auth.uid in resource.data.players;
-      allow delete: if signedIn() && request.auth.uid in resource.data.players;
+
+      allow delete: if signedIn() && (
+        isPlayer1(resource.data) || isPlayer2(resource.data)
+      );
     }
 
-    // Leaderboard: world-readable, owner-writable.
     match /leaderboard/{uid} {
       allow read: if true;
       allow write: if signedIn() && request.auth.uid == uid;
     }
 
-    // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;
     }
