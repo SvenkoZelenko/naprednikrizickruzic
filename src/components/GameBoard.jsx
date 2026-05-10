@@ -2,7 +2,7 @@ import { useI18n } from '../i18n';
 import { getWinningLine } from '../game/logic';
 import { getPlayerRating, fmtDelta } from '../game/elo';
 
-const P_COLOR = { 1: 'yellow', 2: 'violet' };
+const P_COLOR = { 1: '#dc2626', 2: '#2563eb' };
 const P_SYM   = { 1: '✕', 2: '○' };
 
 export default function GameBoard({
@@ -79,7 +79,7 @@ export default function GameBoard({
       {/* Header */}
       <div className="game-header">
         <PlayerCard name={p1name} score={p1score} rating={r1}
-          active={!gameOver && currentPlayer === 1} color="#dc3545" sym="✕"
+          active={!gameOver && currentPlayer === 1} color={P_COLOR[1]} sym="✕"
           delta={result?.delta1} newRating={result?.rating1} />
 
         <div className="status-center-col">
@@ -88,7 +88,7 @@ export default function GameBoard({
         </div>
 
         <PlayerCard name={p2name} score={p2score} rating={r2}
-          active={!gameOver && currentPlayer === 2} color="#007bff" sym="○"
+          active={!gameOver && currentPlayer === 2} color={P_COLOR[2]} sym="○"
           delta={result?.delta2} newRating={result?.rating2} align="right" />
       </div>
 
@@ -97,9 +97,9 @@ export default function GameBoard({
         <div className="timer-bar">
           <div className="timer-fill" style={{
             width: `${(timerSecs / 30) * 100}%`,
-            background: timerSecs <= 10 ? 'yellow' : 'violet',
+            background: timerSecs <= 10 ? 'var(--red)' : 'var(--blue)',
           }} />
-          <span className="timer-text" style={{ color: timerSecs <= 10 ? 'yellow' : 'var(--timer-color)' }}>
+          <span className="timer-text" style={{ color: 'var(--timer-color)' }}>
             {timerSecs}s
           </span>
         </div>
@@ -118,8 +118,7 @@ export default function GameBoard({
               key={`${br}-${bc}`}
               className={[
                 'main-board',
-                active  ? 'board-active'   : '',
-                !active && !gameOver && !winning && !closed ? 'board-inactive' : '',
+                active  ? (currentPlayer === 1 ? 'board-active-p1' : 'board-active-p2') : '',
                 closed  ? 'board-resolved' : '',
                 winning ? 'board-winning'  : '',
               ].join(' ')}
@@ -161,8 +160,8 @@ export default function GameBoard({
               {boardResult && (mode === 'classic' || closed) && (
                 <div className="board-overlay">
                   {boardResult === 'draw'
-                    ? <span style={{ color: 'var(--text-muted)', fontSize: '2.2rem' }}>—</span>
-                    : <span className={boardResult === 1 ? 'sym-x' : 'sym-o'} style={{ fontSize: '3rem' }}>
+                    ? <span style={{ color: 'var(--text-muted)', fontSize: '2.6rem' }}>—</span>
+                    : <span className={boardResult === 1 ? 'sym-x' : 'sym-o'}>
                         {P_SYM[boardResult]}
                       </span>
                   }
@@ -201,7 +200,7 @@ function PlayerCard({ name, score, rating, active, color, sym, delta, newRating,
       <div className="player-card-score" style={{ color }}>{score}</div>
       <div className="player-card-rating">
         {delta != null
-          ? <><span style={{ color: delta >= 0 ? '#28a745' : '#dc3545' }}>{delta >= 0 ? '+' : ''}{delta}</span> → {newRating}</>
+          ? <><span style={{ color: delta >= 0 ? '#16a34a' : 'var(--red)' }}>{delta >= 0 ? '+' : ''}{delta}</span> → {newRating}</>
           : `${rating}`}
       </div>
     </div>
