@@ -139,8 +139,8 @@ body.dark-mode .game-logo {
 
 .mode-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 10px;
   width: 100%;
   margin-bottom: 4px;
 }
@@ -330,7 +330,9 @@ body.dark-mode .game-logo {
 
 /* Mode badge inside dialog */
 .dialog-mode-badge {
-  display: inline-block;
+  display: inline-flex;
+  justify-content: center;
+  width: 100%;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -779,7 +781,7 @@ body.dark-mode .room-code-display {
   .status-text { font-size: 0.72rem; }
   .player-card { padding: 8px; }
   .player-card-score { font-size: 1.5rem; }
-  .mode-cards { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .mode-cards { grid-template-columns: 1fr; gap: 8px; }
   .mode-card  { padding: 9px 5px; }
   .mode-name  { font-size: 0.78rem; }
   .mode-desc  { font-size: 0.66rem; line-height: 1.3; }
