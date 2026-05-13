@@ -2,7 +2,7 @@ import { useI18n } from '../i18n';
 import { getWinningLine } from '../game/logic';
 import { getPlayerRating, fmtDelta } from '../game/elo';
 
-const P_COLOR = { 1: '#dc2626', 2: '#2563eb' };
+const P_COLOR = { 1: '#e02020', 2: '#2060e8' };
 const P_SYM   = { 1: '✕', 2: '○' };
 
 export default function GameBoard({
@@ -70,7 +70,6 @@ export default function GameBoard({
   const p1score = bigBoard.flat().filter(v => v === 1).length;
   const p2score = bigBoard.flat().filter(v => v === 2).length;
 
-  // Mode badge color
   const modeBadgeClass = { classic: 'badge-classic', zrules: 'badge-zrules', steal: 'badge-steal' }[mode] ?? '';
   const modeLabel = t.modes?.['mode_' + mode] ?? mode;
 
@@ -79,7 +78,7 @@ export default function GameBoard({
       {/* Header */}
       <div className="game-header">
         <PlayerCard name={p1name} score={p1score} rating={r1}
-          active={!gameOver && currentPlayer === 1} color={P_COLOR[1]} sym="✕"
+          active={!gameOver && currentPlayer === 1} playerNum={1} color={P_COLOR[1]} sym="✕"
           delta={result?.delta1} newRating={result?.rating1} />
 
         <div className="status-center-col">
@@ -88,20 +87,20 @@ export default function GameBoard({
         </div>
 
         <PlayerCard name={p2name} score={p2score} rating={r2}
-          active={!gameOver && currentPlayer === 2} color={P_COLOR[2]} sym="○"
+          active={!gameOver && currentPlayer === 2} playerNum={2} color={P_COLOR[2]} sym="○"
           delta={result?.delta2} newRating={result?.rating2} align="right" />
       </div>
 
       {/* Timer bar */}
       {timerEnabled && !gameOver && (
         <div className="timer-bar">
-          <div className="timer-fill" style={{
-            width: `${(timerSecs / 30) * 100}%`,
-            background: timerSecs <= 10 ? 'var(--red)' : 'var(--blue)',
-          }} />
-          <span className="timer-text" style={{ color: 'var(--timer-color)' }}>
-            {timerSecs}s
-          </span>
+          <span className="timer-text">{timerSecs}s</span>
+          <div className="timer-track">
+            <div
+              className={['timer-fill', timerSecs <= 8 ? 'timer-fill-urgent' : ''].join(' ')}
+              style={{ width: `${(timerSecs / 30) * 100}%` }}
+            />
+          </div>
         </div>
       )}
 
@@ -127,7 +126,6 @@ export default function GameBoard({
                 {[0, 1, 2].map(r => [0, 1, 2].map(c => {
                   const val = smallBoards[br][bc][r][c];
                   const clickable = canClick(br, bc, r, c);
-                  // In Z/Steal modes dim the entire small grid only if board is closed
                   const dimGrid = closed && !winning;
 
                   return (
@@ -143,11 +141,13 @@ export default function GameBoard({
                       style={{ cursor: clickable ? 'pointer' : 'default' }}
                     >
                       {val && (
-                        <span className={val === 1 ? 'sym-x' : 'sym-o'}>
+                        <span
+                          key={`placed-${val}`}
+                          className={[val === 1 ? 'sym-x' : 'sym-o', 'cell-placed'].join(' ')}
+                        >
                           {P_SYM[val]}
                         </span>
                       )}
-                      {/* Steal mode: highlight enemy cells that can be stolen */}
                       {mode === 'steal' && !gameOver && active && val && val !== currentPlayer && (
                         <span className="steal-indicator" />
                       )}
@@ -156,7 +156,6 @@ export default function GameBoard({
                 }))}
               </div>
 
-              {/* Win overlay — shown in classic always; in Z/Steal only when board still active */}
               {boardResult && (mode === 'classic' || closed) && (
                 <div className="board-overlay">
                   {boardResult === 'draw'
@@ -168,7 +167,6 @@ export default function GameBoard({
                 </div>
               )}
 
-              {/* Z/Steal: show a small corner badge while board is won but still playable */}
               {boardResult && mode !== 'classic' && !closed && (
                 <div className={['corner-badge', boardResult === 1 ? 'sym-x' : boardResult === 2 ? 'sym-o' : ''].join(' ')}>
                   {boardResult !== 'draw' ? P_SYM[boardResult] : '—'}
@@ -190,10 +188,15 @@ export default function GameBoard({
   );
 }
 
-function PlayerCard({ name, score, rating, active, color, sym, delta, newRating, align = 'left' }) {
+function PlayerCard({ name, score, rating, active, playerNum, color, sym, delta, newRating, align = 'left' }) {
+  const activeClass = active
+    ? playerNum === 1 ? 'player-card-active player-card-active-p1' : 'player-card-active player-card-active-p2'
+    : '';
   return (
-    <div className={['player-card', active ? 'player-card-active' : ''].join(' ')}
-      style={{ borderColor: active ? color : 'transparent', textAlign: align }}>
+    <div
+      className={['player-card', activeClass].join(' ')}
+      style={{ borderColor: active ? color : 'transparent', textAlign: align }}
+    >
       <div className="player-card-name" style={{ color }}>
         <span>{sym}</span> {name}
       </div>
