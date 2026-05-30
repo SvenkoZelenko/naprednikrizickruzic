@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useI18n } from '../i18n';
 import Leaderboard from './Leaderboard';
+import ModeSelector from './ModeSelector';
 
 export default function OnlineLobby({
   user, onBack, onSignOut,
@@ -10,6 +11,7 @@ export default function OnlineLobby({
   const { t } = useI18n();
   const [view, setView]       = useState('menu'); // menu|create|join
   const [createMode, setCreateMode] = useState('casual');
+  const [variant, setVariant] = useState('classic');
   const [timer, setTimer]     = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
@@ -17,8 +19,8 @@ export default function OnlineLobby({
   const [lbOpen, setLbOpen]   = useState(false);
 
   async function handleCreate() {
-    if (createMode === 'casual') onCreateCasual(timer);
-    else onCreateRanked(true);
+    if (createMode === 'casual') onCreateCasual(variant, timer);
+    else onCreateRanked(variant);
   }
 
   async function handleJoin() {
@@ -43,7 +45,7 @@ export default function OnlineLobby({
         {/* User bar */}
         <div className="user-bar">
           <span>{user?.displayName || user?.email}</span>
-          <button className="btn-ghost btn-sm" onClick={onSignOut}>{t.lobby.sign_out}</button>
+          <button className="btn-signout" onClick={onSignOut}>{t.lobby.sign_out}</button>
         </div>
 
         {view === 'menu' && (
@@ -65,6 +67,9 @@ export default function OnlineLobby({
             <p className="lobby-subtitle">
               {createMode === 'casual' ? t.lobby.casual : t.lobby.ranked}
             </p>
+            <div style={{ margin: '4px 0 14px' }}>
+              <ModeSelector value={variant} onChange={setVariant} />
+            </div>
             {createMode === 'casual' && (
               <label className="checkbox-label">
                 <input type="checkbox" checked={timer} onChange={e => setTimer(e.target.checked)} />
@@ -73,7 +78,7 @@ export default function OnlineLobby({
             )}
             {createMode === 'ranked' && (
               <p style={{ fontSize: '0.88rem', color: 'var(--user-bar-color)', margin: '0 0 12px' }}>
-                Timer uključen &nbsp;·&nbsp; Standardna ploča
+                Timer uključen
               </p>
             )}
             <div className="dialog-buttons">

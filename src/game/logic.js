@@ -1,8 +1,13 @@
 // ── Pure Ultimate Tic-Tac-Toe logic ──────────────────────────────────────────
 // Modes:
-//   'classic' — won small board is locked, cannot be played
-//   'zrules'  — won board stays playable until all 9 cells are filled
-//   'steal'   — like zrules, plus you can overwrite opponent's cells (not your own)
+//   'classic' — won small board is locked; its result is final.
+//   'zrules'  — a won board stays playable until all 9 cells are filled, but its
+//               result is LOCKED to the FIRST 3-in-a-row and never changes.
+//               Boards stay open only to allow longer play.
+//   'steal'   — like zrules, but a small board's result CAN change: completing
+//               your own 3-in-a-row in a board the opponent controls flips the
+//               result to you. You still play only on empty cells; existing
+//               marks are never overwritten.
 
 export function emptyBigBoard() {
   return Array.from({ length: 3 }, () => Array(3).fill(null));
@@ -16,13 +21,14 @@ export function emptySmallBoards() {
   );
 }
 
+const WIN_LINES = [
+  [[0,0],[0,1],[0,2]], [[1,0],[1,1],[1,2]], [[2,0],[2,1],[2,2]],
+  [[0,0],[1,0],[2,0]], [[0,1],[1,1],[2,1]], [[0,2],[1,2],[2,2]],
+  [[0,0],[1,1],[2,2]], [[0,2],[1,1],[2,0]],
+];
+
 export function checkWinner(board) {
-  const lines = [
-    [[0,0],[0,1],[0,2]], [[1,0],[1,1],[1,2]], [[2,0],[2,1],[2,2]],
-    [[0,0],[1,0],[2,0]], [[0,1],[1,1],[2,1]], [[0,2],[1,2],[2,2]],
-    [[0,0],[1,1],[2,2]], [[0,2],[1,1],[2,0]],
-  ];
-  for (const [[r0,c0],[r1,c1],[r2,c2]] of lines) {
+  for (const [[r0,c0],[r1,c1],[r2,c2]] of WIN_LINES) {
     const v = board[r0][c0];
     if (v && v !== 'draw' && v === board[r1][c1] && v === board[r2][c2]) return v;
   }
@@ -38,8 +44,8 @@ function isBoardClosed(br, bc, smallBoards, bigBoard, mode) {
   return isFull(smallBoards[br][bc]);
 }
 
-function isCellAvailable(val, currentPlayer, mode) {
-  if (mode === 'steal') return val !== currentPlayer;
+// A cell can only ever be played on if it is empty — no mode overwrites marks.
+function isCellAvailable(val) {
   return val === null;
 }
 
@@ -57,7 +63,7 @@ export function applyMove(state, br, bc, r, c) {
   if (nextBoard && (nextBoard.br !== br || nextBoard.bc !== bc)) return null;
   if (isBoardClosed(br, bc, smallBoards, bigBoard, mode)) return null;
   const cellVal = smallBoards[br][bc][r][c];
-  if (!isCellAvailable(cellVal, currentPlayer, mode)) return null;
+  if (!isCellAvailable(cellVal)) return null;
 
   const newSmall = smallBoards.map(bRow =>
     bRow.map(b => b.map(row => [...row]))
@@ -66,13 +72,28 @@ export function applyMove(state, br, bc, r, c) {
 
   newSmall[br][bc][r][c] = currentPlayer;
 
-  const smallWinner = checkWinner(newSmall[br][bc]);
-  if (smallWinner) {
-    newBig[br][bc] = smallWinner;
-  } else if (isFull(newSmall[br][bc])) {
-    newBig[br][bc] = 'draw';
+  // Resolve this small board's result on the big board.
+  const cells = newSmall[br][bc];
+  if (mode === 'steal') {
+    // The result can be STOLEN: if this move completes a 3-in-a-row for the
+    // current player, they claim the board — even if the opponent controlled it.
+    const justWon = WIN_LINES.some(line =>
+      line.some(([lr, lc]) => lr === r && lc === c) &&
+      line.every(([lr, lc]) => cells[lr][lc] === currentPlayer)
+    );
+    if (justWon) {
+      newBig[br][bc] = currentPlayer;            // take or steal the board
+    } else if (newBig[br][bc] === null && isFull(cells)) {
+      newBig[br][bc] = 'draw';
+    }
+    // Otherwise keep the existing result (opponent's mark, or still open).
   } else {
-    newBig[br][bc] = null;
+    // classic & zrules: the FIRST 3-in-a-row locks the result permanently.
+    if (newBig[br][bc] === null) {
+      const smallWinner = checkWinner(cells);
+      if (smallWinner) newBig[br][bc] = smallWinner;
+      else if (isFull(cells)) newBig[br][bc] = 'draw';
+    }
   }
 
   const bigWinner = checkWinner(newBig);
@@ -93,12 +114,7 @@ export function applyMove(state, br, bc, r, c) {
 }
 
 export function getWinningLine(bigBoard, winner) {
-  const lines = [
-    [[0,0],[0,1],[0,2]], [[1,0],[1,1],[1,2]], [[2,0],[2,1],[2,2]],
-    [[0,0],[1,0],[2,0]], [[0,1],[1,1],[2,1]], [[0,2],[1,2],[2,2]],
-    [[0,0],[1,1],[2,2]], [[0,2],[1,1],[2,0]],
-  ];
-  for (const line of lines) {
+  for (const line of WIN_LINES) {
     if (line.every(([r,c]) => bigBoard[r][c] === winner)) return line;
   }
   return null;

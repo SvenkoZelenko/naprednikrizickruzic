@@ -131,12 +131,12 @@ export default function App() {
     setTimeout(() => setScreen('lobby'), 0);
   }
 
-  async function handleCreateCasual(timer) {
-    await online.createGame('casual', timer);
+  async function handleCreateCasual(variant, timer) {
+    await online.createGame(variant, 'casual', timer);
     setScreen('waiting');
   }
-  async function handleCreateRanked() {
-    await online.createGame('ranked', true);
+  async function handleCreateRanked(variant) {
+    await online.createGame(variant, 'ranked', true);
     setScreen('waiting');
   }
   async function handleJoin(code) {
@@ -226,6 +226,7 @@ export default function App() {
       {screen === 'waiting' && (
         <WaitingRoom
           roomCode={online.roomCode}
+          variant={online.gameData?.variant}
           onCancel={() => { online.leaveGame(); setScreen('lobby'); }}
         />
       )}

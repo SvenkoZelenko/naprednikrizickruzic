@@ -9,7 +9,7 @@ const translations = {
       mode_zrules:       'Z Rules',
       mode_zrules_desc:  'Osvojeno polje ostaje aktivno dok se ne popuni.',
       mode_steal:        'Z Rules + Preotimanje',
-      mode_steal_desc:   'Možeš preoteti protivnikovo zauzeto mjesto.',
+      mode_steal_desc:   'Možeš preoteti polje koje protivnik kontrolira.',
     },
     menu: {
       new_game:  'Nova Igra',
@@ -54,8 +54,8 @@ const translations = {
       close: 'Zatvori',
       common: 'Potez unutar malog polja (pozicija r,c) određuje u koje malo polje protivnik igra sljedeće. Ako je ciljna ploča zauzeta (zaključana), možeš igrati bilo gdje.',
       classic: 'Standardni Ultimate TTT. Kada igrač pobijedi na malom polju, to se polje zaključava i više se ne može igrati u njemu. Tri osvajanja u nizu na velikoj ploči = pobjeda.',
-      zrules:  'Osvojeno polje prikazuje pobjednika, ali ostaje aktivno i u njemu se nastavlja igra sve dok se sve ćelije ne popune. Rezultat malog polja se može promijeniti!',
-      steal:   'Sve isto kao Z Rules, uz jednu razliku — možeš kliknuti na protivnikovu ćeliju i preoteti je. Vlastite ćelije ne možeš preoteti. Šteti strategiju protivnika.',
+      zrules:  'Osvojeno polje prikazuje pobjednika, ali ostaje aktivno i u njemu se i dalje može igrati dok se sve ćelije ne popune. Rezultat malog polja ostaje nepromijenjen — polje ostaje otvoreno samo radi duljeg trajanja igre.',
+      steal:   'Sve isto kao Z Rules, ali se rezultat malog polja MOŽE promijeniti. Ako protivnik kontrolira polje (tri u nizu), a ti u istom polju složiš svoja tri u nizu, rezultat se preokreće u tvoju korist (X↔O). I dalje igraš samo na prazne ćelije — tuđe znakove ne možeš prepisati.',
     },
     leaderboard: {
       title: 'Leaderboard', close: 'Zatvori',
@@ -72,7 +72,7 @@ const translations = {
       mode_zrules:       'Z Rules',
       mode_zrules_desc:  'Won boards stay active until fully filled.',
       mode_steal:        'Z Rules + Steal',
-      mode_steal_desc:   "You can steal the opponent's cells.",
+      mode_steal_desc:   'Steal a board the opponent controls.',
     },
     menu: {
       new_game:  'New Game',
@@ -117,8 +117,8 @@ const translations = {
       close: 'Close',
       common: 'Your move position (r,c) inside a small board sends the opponent to the corresponding small board next. If that board is locked, they may play anywhere.',
       classic: 'Standard Ultimate TTT. When a player wins a small board it locks — no more moves there. Three wins in a row on the big board = victory.',
-      zrules:  'Won boards display the winner but stay open for play until all 9 cells are physically filled. The small board outcome can change!',
-      steal:   "Same as Z Rules, but you can click an opponent's cell to overwrite it. You cannot overwrite your own cells. Disrupts the opponent's strategy.",
+      zrules:  'Won boards display the winner but stay open for play until all 9 cells are filled. The result does not change — boards stay open only to allow longer play.',
+      steal:   'Same as Z Rules, but the small board result CAN change. If the opponent controls a board (three in a row) and you complete your own three in a row in that same board, its result flips in your favour (X↔O). You still play only on empty cells — existing marks are never overwritten.',
     },
     leaderboard: {
       title: 'Leaderboard', close: 'Close',

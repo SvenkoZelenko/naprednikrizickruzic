@@ -41,9 +41,8 @@ export default function GameBoard({
     if (gameOver) return false;
     if (myNumber !== null && currentPlayer !== myNumber) return false;
     if (!isActiveBoardPos(br, bc)) return false;
-    const val = smallBoards[br][bc][r][c];
-    if (mode === 'steal') return val !== currentPlayer;
-    return val === null;
+    // All modes: a cell is clickable only when empty (marks are never overwritten).
+    return smallBoards[br][bc][r][c] === null;
   }
 
   function isWinningBoard(br, bc) {
@@ -147,9 +146,6 @@ export default function GameBoard({
                         >
                           {P_SYM[val]}
                         </span>
-                      )}
-                      {mode === 'steal' && !gameOver && active && val && val !== currentPlayer && (
-                        <span className="steal-indicator" />
                       )}
                     </div>
                   );

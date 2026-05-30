@@ -312,6 +312,34 @@ body {
 
 .btn-sm { font-size: 0.8rem; padding: 4px 10px; border-radius: var(--radius-sm); }
 
+/* Sign-out chip — clearly legible in both themes, matches app button language */
+.btn-signout {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  line-height: 1.15;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.14s ease, border-color 0.14s ease,
+              color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+}
+.btn-signout:hover {
+  background: var(--grad-brand);
+  color: #fff;
+  border-color: transparent;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow), 0 0 16px rgba(124, 58, 237, 0.25);
+}
+.btn-signout:active {
+  transform: scale(0.96) translateY(0);
+  transition-duration: 0.06s;
+}
+
 /* ── Forms ───────────────────────────────────────────────────────────────── */
 .field-label {
   display: block;
@@ -640,17 +668,6 @@ body {
   animation: cellDrop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* Steal mode indicator */
-.steal-indicator {
-  position: absolute;
-  inset: 3px;
-  border-radius: 4px;
-  border: 2px dashed var(--mode-steal);
-  opacity: 0.55;
-  pointer-events: none;
-  animation: stealPulse 1.4s ease-in-out infinite;
-}
-
 /* ── Board win overlay ───────────────────────────────────────────────────── */
 .board-overlay {
   position: absolute; inset: 0;
@@ -939,11 +956,6 @@ body.dark-mode .board-overlay { background: rgba(0, 0, 0, 0.22); }
   60%  { transform: scale(1.15) rotate(2deg); opacity: 1; }
   80%  { transform: scale(0.93) rotate(-1deg); }
   100% { transform: scale(1) rotate(0deg); opacity: 1; }
-}
-
-@keyframes stealPulse {
-  0%, 100% { opacity: 0.35; }
-  50%       { opacity: 0.75; }
 }
 
 @keyframes boardGlowX {

@@ -23,6 +23,7 @@ function serializeState(gs) {
     nextBoard:    gs.nextBoard ? JSON.stringify(gs.nextBoard) : null,
     winner:       gs.winner,
     draw:         gs.draw,
+    variant:      gs.mode ?? 'classic',
   };
 }
 
@@ -34,6 +35,7 @@ function deserializeState(d) {
     nextBoard:     d.nextBoard ? JSON.parse(d.nextBoard) : null,
     winner:        d.winner ?? null,
     draw:          d.draw ?? false,
+    mode:          d.variant ?? 'classic',
   };
 }
 
@@ -77,15 +79,15 @@ export function useOnlineGame() {
   }, [clearTimer]);
 
   // ── Create game ────────────────────────────────────────────────────────────
-  const createGame = useCallback(async (mode, timer) => {
+  const createGame = useCallback(async (variant, onlineMode, timer) => {
     const user = auth.currentUser;
     if (!user) return;
     const code   = genCode();
     const gameId = 'game_' + code;
-    const init   = initialGameState();
+    const init   = initialGameState(variant);
 
     setPhase('creating');
-    setGameMode(mode);
+    setGameMode(onlineMode);
     setTimerEnabled(timer);
     setRoomCode(code);
 
@@ -93,7 +95,7 @@ export function useOnlineGame() {
     const rating     = playerSnap.exists() ? (playerSnap.data().rating ?? 1200) : 1200;
 
     await setDoc(doc(db, 'games', gameId), {
-      gameCode: code, mode, status: 'waiting',
+      gameCode: code, mode: onlineMode, status: 'waiting',
       player1uid: user.uid,
       player1name: user.displayName || user.email,
       player1rating: rating,
